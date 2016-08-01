@@ -1,0 +1,14 @@
+<%= error_messages_for 'relation' %>
+
+<div class="wrapper-rel-issue">
+  <%= f.select :relation_type, collection_for_relation_type_select, {}, :onchange => "setPredecessorFieldsVisibility();" %>
+  <span class="issue-number"><%= l(:label_issue) %> #</span><%= f.text_field :issue_to_id, :size => 10 %>
+  <span id="predecessor_fields" style="display:none;"><%= l(:field_delay) %>
+    : <%= f.text_field :delay, :size => 3 %> <%= l(:label_day_plural) %></span>
+  <%= submit_tag l(:button_add) %>
+  <span class="cancel"><%= link_to_function l(:button_cancel), '$("#new-relation-form").hide();' %></span>
+</div>
+
+<%= javascript_tag "observeAutocompleteField('relation_issue_to_id', '#{escape_javascript auto_complete_issues_path(:project_id => @project, :scope => (Setting.cross_project_issue_relations? ? 'all' : nil))}')" %>
+
+<%= javascript_tag "setPredecessorFieldsVisibility();" %>

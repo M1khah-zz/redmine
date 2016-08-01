@@ -1,0 +1,75 @@
+<%= labelled_form_for @issue, :html => {:id => 'issue-form', :multipart => true} do |f| %>
+    <%= error_messages_for 'issue', 'time_entry' %>
+    <%= render :partial => 'conflict' if @conflict %>
+    <div class="box tabular">
+      <% if @issue.attributes_editable? %>
+          <fieldset class="collapsed">
+            <span class="legend"><%= l(:label_change_properties) %></span>
+
+            <div class="wrapper-content">
+              <div id="all_attributes">
+                <%= render :partial => 'form', :locals => {:f => f} %>
+              </div>
+            </div>
+          </fieldset>
+      <% end %>
+      <% if User.current.allowed_to?(:log_time, @project) %>
+          <fieldset class="collapsed">
+            <span class="legend"><%= l(:button_log_time) %></span>
+
+            <div class="wrapper-content log-time">
+              <%= labelled_fields_for :time_entry, @time_entry do |time_entry| %>
+                  <div class="splitcontentleft">
+                    <p><%= time_entry.text_field :hours, :size => 6, :label => :label_spent_time %> <%= l(:field_hours) %></p>
+                  </div>
+                  <div class="splitcontentright">
+                    <p><%= time_entry.select :activity_id, activity_collection_for_select_options %></p>
+                  </div>
+                  <div class="comment"><%= time_entry.text_field :comments, :size => 60 %></div>
+                  <% @time_entry.custom_field_values.each do |value| %>
+                      <p><%= custom_field_tag_with_label :time_entry, value %></p>
+                  <% end %>
+              <% end %>
+            </div>
+          </fieldset>
+      <% end %>
+
+      <fieldset class="collapsed">
+        <span class="legend"><%= l(:field_notes) %></span>
+
+        <div class="wrapper-content">
+          <span class="comment-label"><%= l(:label_comment) %></span>
+          <%= f.text_area :notes, :cols => 60, :rows => 10, :class => 'wiki-edit', :no_label => true %>
+          <%= wikitoolbar_for 'issue_notes' %>
+
+          <% if @issue.safe_attribute? 'private_notes' %>
+              <div class="privet-notes">
+                <%= f.check_box :private_notes, :no_label => true %>
+                <label for="issue_private_notes"><%= l(:field_private_notes) %></label>
+              </div>
+          <% end %>
+
+          <%= call_hook(:view_issues_edit_notes_bottom, {:issue => @issue, :notes => @notes, :form => f}) %>
+        </div>
+      </fieldset>
+
+      <fieldset class="collapsed">
+        <span class="legend"><%= l(:label_attachment_plural) %></span>
+        <div class="wrapper-content">
+          <span class="upload-files"><%= l(:field_upload_files) %></span>
+          <p class="load-files"><%= render :partial => 'attachments/form', :locals => {:container => @issue} %></p>
+        </div>
+      </fieldset>
+    </div>
+    <div class="wrapper-buttons">
+      <div class="center">
+        <%= f.hidden_field :lock_version %>
+        <%= hidden_field_tag 'last_journal_id', params[:last_journal_id] || @issue.last_journal_id %>
+        <%= submit_tag l(:button_submit) %>
+        <%= preview_link preview_edit_issue_path(:project_id => @project, :id => @issue), 'issue-form' %>
+        | <%= link_to l(:button_cancel), {}, :onclick => "$('#update').hide(); return false;" %>
+      </div>
+    </div>
+<% end %>
+
+<div id="preview" class="wiki"></div>

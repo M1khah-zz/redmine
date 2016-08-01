@@ -1,0 +1,34 @@
+<h3><%=l(:label_my_account)%></h3>
+
+<p><span class="grey-label"><%=l(:field_login)%>:</span> <%= link_to_user(@user, :format => :username) %><br />
+  <span class="grey-label"><%=l(:field_created_on)%>:</span> <%= format_time(@user.created_on) %></p>
+
+<% if @user.own_account_deletable? %>
+  <p class="delete-account"><%= link_to(l(:button_delete_my_account), {:action => 'destroy'}, :class => 'icon icon-del') %></p>
+<% end %>
+
+<p>
+<% if @user.rss_token %>
+<%= l(:label_feeds_access_key_created_on, distance_of_time_in_words(Time.now, @user.rss_token.created_on)) %>
+<% else %>
+<%= l(:label_missing_feeds_access_key) %>
+<% end %>
+<br><span class="reset-link"><%= link_to l(:button_reset), {:action => 'reset_rss_key'}, :method => :post %></span>
+</p>
+
+<% if Setting.rest_api_enabled? %>
+<h4><%= l(:label_api_access_key) %></h4>
+<div>
+  <%= link_to l(:button_show), {:action => 'show_api_key'}, :remote => true %>
+  <pre id='api-access-key' class='autoscroll'></pre>
+</div>
+<%= javascript_tag("$('#api-access-key').hide();") %>
+<p>
+<% if @user.api_token %>
+<%= l(:label_api_access_key_created_on, distance_of_time_in_words(Time.now, @user.api_token.created_on)) %>
+<% else %>
+<%= l(:label_missing_api_access_key) %>
+<% end %>
+(<%= link_to l(:button_reset), {:action => 'reset_api_key'}, :method => :post %>)
+</p>
+<% end %>

@@ -1,0 +1,242 @@
+<%= render :partial => 'action_menu' %>
+
+<h2><span class="issue-name"><%= h(@issue.subject) %></span><span class="issue-number"><%= issue_heading(@issue) %></span></h2>
+
+<div class="subject">
+  <%= render_issue_subject_with_tree(@issue) %>
+</div>
+
+
+
+
+<% if @prev_issue_id || @next_issue_id %>
+    <div class="next-prev-links">
+      <%= link_to_if @prev_issue_id,
+                     "\xc2\xab #{l(:label_previous)}",
+                     (@prev_issue_id ? issue_path(@prev_issue_id) : nil),
+                     :title => "##{@prev_issue_id}",
+                     :accesskey => accesskey(:previous) %> |
+      <% if @issue_position && @issue_count %>
+          <span class="position"><%= l(:label_item_position, :position => @issue_position, :count => @issue_count) %></span>
+          |
+      <% end %>
+      <%= link_to_if @next_issue_id,
+                     "#{l(:label_next)} \xc2\xbb",
+                     (@next_issue_id ? issue_path(@next_issue_id) : nil),
+                     :title => "##{@next_issue_id}",
+                     :accesskey => accesskey(:next) %>
+    </div>
+<% end %>
+
+
+<div class="<%= @issue.css_classes %> details">
+  <%= avatar(@issue.author, :size => "50") %>
+
+  <fieldset>
+    <span class="legend" onclick="toggleFieldset(this);">Details</span>
+
+    <div class="wrapper-content">
+      <p class="author">
+        <%= authoring @issue.created_on, @issue.author %>.
+        <% if @issue.created_on != @issue.updated_on %>
+            <%= l(:label_updated_time, time_tag(@issue.updated_on)).html_safe %>.
+        <% end %>
+      </p>
+      <table class="attributes">
+        <%= issue_fields_rows do |rows|
+          rows.left l(:field_status), @issue.status.name, :class => 'status'
+          rows.left l(:field_priority), @issue.priority.name, :class => 'priority'
+
+          unless @issue.disabled_core_fields.include?('assigned_to_id')
+            rows.left l(:field_assigned_to), avatar(@issue.assigned_to, :size => "14").to_s.html_safe + (@issue.assigned_to ? link_to_user(@issue.assigned_to) : "-"), :class => 'assigned-to'
+          end
+          unless @issue.disabled_core_fields.include?('category_id')
+            rows.left l(:field_category), (@issue.category ? @issue.category.name : "-"), :class => 'category'
+          end
+          unless @issue.disabled_core_fields.include?('fixed_version_id')
+            rows.left l(:field_fixed_version), (@issue.fixed_version ? link_to_version(@issue.fixed_version) : "-"), :class => 'fixed-version'
+          end
+
+          unless @issue.disabled_core_fields.include?('start_date')
+            rows.right l(:field_start_date), format_date(@issue.start_date), :class => 'start-date'
+          end
+          unless @issue.disabled_core_fields.include?('due_date')
+            rows.right l(:field_due_date), format_date(@issue.due_date), :class => 'due-date'
+          end
+          unless @issue.disabled_core_fields.include?('done_ratio')
+            if (@issue.done_ratio==Float::NAN)
+              @issue.done_ratio=90
+            end
+            rows.right l(:field_done_ratio), progress_bar(@issue.done_ratio, :width => '80px', :legend => "#{@issue.done_ratio}%"), :class => 'progress'
+          end
+          unless @issue.disabled_core_fields.include?('estimated_hours')
+            unless @issue.total_estimated_hours.nil?
+              rows.right l(:field_estimated_hours), issue_estimated_hours_details(@issue), :class => 'estimated-hours'
+            end
+          end
+
+          if User.current.allowed_to_view_all_time_entries?(@project)
+            if @issue.total_spent_hours > 0
+              rows.right l(:label_spent_time), issue_spent_hours_details(@issue), :class => 'spent-time'
+              rows.right l(:remaing_hours), issue_remaining_hours_details(@issue), :class => 'estimated-hours'
+            end
+          end
+        end %>
+        <%= render_custom_fields_rows(@issue) %>
+        <%= call_hook(:view_issues_show_details_bottom, :issue => @issue) %>
+      </table>
+    </div>
+  </fieldset>
+
+
+  <% if @issue.description? || @issue.attachments.any? -%>
+      <% if @issue.description? %>
+          <fieldset>
+            <span class="legend" onclick="toggleFieldset(this);">Description</span>
+            <span class="contextual">
+              <%= link_to l(:button_quote), quoted_issue_path(@issue), :remote => true, :method => 'post', :class => '' if authorize_for('issues', 'edit') %>
+            </span>
+
+            <div class="description wrapper-content">
+              <div class="wiki">
+                <%= textilizable @issue, :description, :attachments => @issue.attachments %>
+              </div>
+            </div>
+          </fieldset>
+      <% end %>
+      <%= link_to_attachments @issue, :thumbnails => true %>
+  <% end -%>
+
+  <%= call_hook(:view_issues_show_description_bottom, :issue => @issue) %>
+
+<!-- Filters option start-->
+<h2><%= @query.new_record? ? l(:label_issue_plural) : @query.name %></h2>
+<% html_title(@query.new_record? ? l(:label_issue_plural) : @query.name) %>
+
+<%= form_tag({ :controller => 'issues', :action => 'index', :project_id => @project },
+            :method => :get, :id => 'query_form') do %>
+  <div id="query_form_with_buttons" class="hide-when-print">
+    <%= hidden_field_tag 'set_filter', '1' %>
+    <div id="query_form_content">
+    <fieldset id="filters" class="collapsible <%= @query.new_record? ? "" : "collapsed" %>">
+      <legend onclick="toggleFieldset(this);"><%= l(:label_filter_plural) %></legend>
+      <div style="<%= @query.new_record? ? "" : "display: none;" %>">
+        <%= render :partial => 'queries/filters', :locals => {:query => @query} %>
+      </div>
+    </fieldset>
+    <fieldset class="collapsible collapsed">
+      <legend onclick="toggleFieldset(this);"><%= l(:label_options) %></legend>
+      <div style="display: none;">
+        <table>
+          <tr>
+            <td><%= l(:field_column_names) %></td>
+            <td><%= render_query_columns_selection(@query) %></td>
+          </tr>
+          <tr>
+            <td><label for='group_by'><%= l(:field_group_by) %></label></td>
+            <td><%= select_tag('group_by',
+                               options_for_select(
+                                 [[]] + @query.groupable_columns.collect {|c| [c.caption, c.name.to_s]},
+                                 @query.group_by)
+                       ) %></td>
+          </tr>
+          <tr>
+            <td><%= l(:button_show) %></td>
+            <td><%= available_block_columns_tags(@query) %></td>
+          </tr>
+        </table>
+      </div>
+    </fieldset>
+    </div>
+    <p class="buttons">
+    <%= link_to_function l(:button_apply), '$("#query_form").submit()', :class => 'icon icon-checked' %>
+    <%= link_to l(:button_clear), { :set_filter => 1, :project_id => @project }, :class => 'icon icon-reload'  %>
+    <% if @query.new_record? && User.current.allowed_to?(:save_queries, @project, :global => true) %>
+        <%= link_to_function l(:button_save),
+                             "$('#query_form').attr('action', '#{ @project ? new_project_query_path(@project) : new_query_path }').submit()",
+                             :class => 'icon icon-save' %>
+    <% end %>
+    </p>
+  </div>
+<% end %> <!-- Filters option end-->
+  <% if !@issue.leaf? || User.current.allowed_to?(:manage_subtasks, @project) %>
+      <fieldset class="">
+        <span class="legend" onclick="toggleFieldset(this);">Subtasks</span>
+        <span class="contextual">
+          <%= link_to_new_subtask(@issue) if User.current.allowed_to?(:manage_subtasks, @project) %>
+        </span>
+
+        <div id="issue_tree" class="wrapper-content" >
+          <%= render_descendants_tree(@issue) unless @issue.leaf? %>
+        </div>
+      </fieldset>
+  <% end %>
+
+  <% if @relations.present? || User.current.allowed_to?(:manage_issue_relations, @project) %>
+      <fieldset class="">
+        <span class="legend" onclick="toggleFieldset(this);">Related issues</span>
+        <span class="contextual">
+          <% if User.current.allowed_to?(:manage_issue_relations, @project) %>
+              <%= toggle_link l(:button_add), 'new-relation-form', {:focus => 'relation_issue_to_id'} %>
+          <% end %>
+        </span>
+
+        <div id="relations" class="wrapper-content" >
+          <%= render :partial => 'relations' %>
+        </div>
+      </fieldset>
+  <% end %>
+
+</div>
+
+<% if @changesets.present? %>
+    <div id="issue-changesets">
+      <h3><%= l(:label_associated_revisions) %></h3>
+      <%= render :partial => 'changesets', :locals => {:changesets => @changesets} %>
+    </div>
+<% end %>
+
+<% if @journals.present? %>
+    <div id="history" class="history">
+      <h3><%= l(:label_history) %></h3>
+      <%= render :partial => 'history', :locals => {:issue => @issue, :journals => @journals} %>
+    </div>
+<% end %>
+
+
+<div style="clear: both;"></div>
+<%= render :partial => 'action_menu' %>
+
+<div style="clear: both;"></div>
+<% if @issue.editable? %>
+    <div id="update" style="display:none;">
+      <div class="wrapper-update">
+        <h3><%= l(:button_edit) %></h3>
+        <%= render :partial => 'edit' %>
+      </div>
+    </div>
+<% end %>
+
+<% other_formats_links do |f| %>
+    <%= f.link_to 'Atom', :url => {:key => User.current.rss_key} %>
+    <%= f.link_to 'PDF' %>
+<% end %>
+
+<% html_title "#{@project.name} #{@issue.id}: #{@issue.subject}" %>
+
+<% content_for :sidebar do %>
+    <%= render :partial => 'issues/sidebar' %>
+
+    <% if User.current.allowed_to?(:add_issue_watchers, @project) ||
+            (@issue.watchers.present? && User.current.allowed_to?(:view_issue_watchers, @project)) %>
+        <div id="watchers">
+          <%= render :partial => 'watchers/watchers', :locals => {:watched => @issue} %>
+        </div>
+    <% end %>
+<% end %>
+
+<% content_for :header_tags do %>
+    <%= auto_discovery_link_tag(:atom, {:format => 'atom', :key => User.current.rss_key}, :title => "#{@issue.project} - #{@issue.tracker} ##{@issue.id}: #{@issue.subject}") %>
+<% end %>
+
+<%= context_menu issues_context_menu_path %>

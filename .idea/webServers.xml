@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="2f40fd40-afba-427a-bd04-3bada70a829a" name="redmine" url="http://redmine.kultprosvet.net">
+        <fileTransfer host="redmine.kultprosvet.net" port="22" privateKey="$USER_HOME$/Downloads/redmine.pem" rootFolder="/home/bitnami/apps/redmine/htdocs" accessType="SFTP" username="bitnami" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
